@@ -17,7 +17,7 @@ A decoupled two-app architecture engineered for sub-500ms cold-start camera stre
 
 Establish the foundation of the Viewer app with optimized Media3/ExoPlayer RTSP dependencies, fullscreen no-decor rendering, and tuned low-latency buffer thresholds.
 
-### [ ] Task 1.1: Project Scaffolding, Build Configuration & Manifest Hardening [EASY]
+### [x] Task 1.1: Project Scaffolding, Build Configuration & Manifest Hardening [EASY]
 - **Target Files:** `settings.gradle.kts`, `rtsp-viewer/build.gradle.kts`, `rtsp-viewer/src/main/AndroidManifest.xml`
 - **Dependencies:** `androidx.media3:media3-exoplayer:1.3.1`, `androidx.media3:media3-exoplayer-rtsp:1.3.1`, `androidx.media3:media3-ui:1.3.1`
 - **Requirements:** Configure MinSDK 26, TargetSDK 34, JVM 17. Configure ProGuard/R8 minify/shrink directives. Add fullscreen, hardware acceleration flags, and network permissions.

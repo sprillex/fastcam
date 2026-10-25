@@ -6,7 +6,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 
 ## Phase 1: Barebones Headless RTSP Player Core
 
-### Task 1.1: Project Scaffolding, Build Configuration & Manifest Hardening [EASY]
+### Task 1.1: Project Scaffolding, Build Configuration & Manifest Hardening [RESOLVED] [EASY]
 - **Target Files:**
   - Modify: `settings.gradle.kts`
   - Create: `rtsp-viewer/build.gradle.kts`, `rtsp-viewer/src/main/AndroidManifest.xml`
