@@ -40,7 +40,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 
 ## Phase 2: Dynamic IPC Configuration & Security Boundaries
 
-### Task 2.1: Signature-Guarded Broadcast Receiver & Flash Persistence [EASY]
+### Task 2.1: Signature-Guarded Broadcast Receiver & Flash Persistence [RESOLVED] [EASY]
 - **Target Files:**
   - Modify: `rtsp-viewer/src/main/AndroidManifest.xml`
   - Create: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/ConfigReceiver.kt`

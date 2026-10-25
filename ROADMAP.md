@@ -34,7 +34,7 @@ Establish the foundation of the Viewer app with optimized Media3/ExoPlayer RTSP 
 
 Implement secure out-of-process broadcast synchronization allowing credentials and endpoints to be updated without rebuilding or reinstalling the viewer.
 
-### [ ] Task 2.1: Signature-Guarded Broadcast Receiver & Flash Persistence [EASY]
+### [x] Task 2.1: Signature-Guarded Broadcast Receiver & Flash Persistence [EASY]
 - **Target Files:** `rtsp-viewer/src/main/AndroidManifest.xml`, `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/ConfigReceiver.kt`
 - **Requirements:** Declare custom signature permission `com.sprillex.rtspviewer.permission.WRITE_CONFIG`. Implement `ConfigReceiver` to extract `stream_uri` from `ACTION_UPDATE_STREAM` broadcasts and commit asynchronously to private `SharedPreferences` (`viewer_config.xml`).
 - **Verification:** `adb shell am broadcast -a com.sprillex.rtspviewer.ACTION_UPDATE_STREAM -n com.sprillex.rtspviewer/.ConfigReceiver --es stream_uri "rtsp://test"`
