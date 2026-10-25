@@ -22,11 +22,21 @@
             android:name=".MainActivity"
             android:exported="true"
             android:hardwareAccelerated="true"
+            android:launchMode="singleTop"
             android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="video"
+                    android:scheme="fastcam" />
             </intent-filter>
         </activity>
 

@@ -71,7 +71,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 
 ## Phase 3: Deep Linking & External Action Integration
 
-### Task 3.1: Custom Scheme Intent Filter & Deep Link Routing [EASY]
+### Task 3.1: Custom Scheme Intent Filter & Deep Link Routing [RESOLVED] [EASY]
 - **Target Files:**
   - Modify: `rtsp-viewer/src/main/AndroidManifest.xml`
   - Modify: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`

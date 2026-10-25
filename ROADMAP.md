@@ -50,7 +50,7 @@ Implement secure out-of-process broadcast synchronization allowing credentials a
 
 Enable sub-millisecond invocation from notification handlers (Home Assistant, Pushover, ntfy) and ensure robust single-instance lifecycle management.
 
-### [ ] Task 3.1: Custom Scheme Intent Filter & Deep Link Routing [EASY]
+### [x] Task 3.1: Custom Scheme Intent Filter & Deep Link Routing [EASY]
 - **Target Files:** `rtsp-viewer/src/main/AndroidManifest.xml`, `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Requirements:** Register `android:scheme="fastcam"` and `android:host="video"` under `MainActivity` intent filters. Implement `onNewIntent()` to handle incoming intents during active playback without destroying the surface or triggering re-buffering.
 - **Verification:** `adb shell am start -a android.intent.action.VIEW -d "fastcam://video"`
