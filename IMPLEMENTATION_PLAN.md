@@ -116,7 +116,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 
 ## Phase 5: Profiling, Optimization & Final Release Packaging
 
-### Task 5.1: Latency Profiling & R8 ProGuard Minification Rules [EASY]
+### Task 5.1: Latency Profiling & R8 ProGuard Minification Rules [RESOLVED] [EASY]
 - **Target Files:**
   - Create: `rtsp-viewer/proguard-rules.pro`
   - Create: `rtsp-config/proguard-rules.pro`

@@ -77,7 +77,7 @@ Introduce non-blocking kernel network probing and asynchronous WireGuard tunnel 
 
 Benchmark cold-start launch times against local and cellular routes, audit ProGuard keep-rules, and assemble signed release packages.
 
-### [ ] Task 5.1: Latency Profiling & R8 ProGuard Minification Rules [EASY]
+### [x] Task 5.1: Latency Profiling & R8 ProGuard Minification Rules [EASY]
 - **Target Files:** `rtsp-viewer/proguard-rules.pro`, `rtsp-config/proguard-rules.pro`
 - **Requirements:** Retain Media3 ExoPlayer RTSP internals while aggressively stripping all unused UI controllers, styling assets, and metadata. Execute cold-start launch benchmark with `logcat -s ActivityTaskManager` to verify `displayedTime < 500ms`.
 - **Verification:** `adb shell am start-W -n com.sprillex.rtspviewer/.MainActivity`
