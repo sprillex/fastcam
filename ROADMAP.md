@@ -61,7 +61,7 @@ Enable sub-millisecond invocation from notification handlers (Home Assistant, Pu
 
 Introduce non-blocking kernel network probing and asynchronous WireGuard tunnel orchestration to allow remote viewing without introducing latency while at home.
 
-### [ ] Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [HARD]
+### [x] Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [HARD]
 - **Target Files:** `rtsp-viewer/src/main/AndroidManifest.xml`, `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Requirements:** Query `ConnectivityManager.getNetworkCapabilities()` during `onCreate()` (<0.5ms in-memory read). If transport is non-Wi-Fi, immediately dispatch broadcast `com.wireguard.android.action.SET_TUNNEL_UP` with tunnel name `HomeLab`. Simultaneously initialize RTSP player in parallel. Implement backoff retry mechanism (150ms interval, max 4 attempts) on `PlaybackException` to catch delayed tunnel initialization.
 - **Verification:** Simulate cellular interface via `adb shell cmd connectivity` and verify intent broadcast via `logcat -s WireGuard`

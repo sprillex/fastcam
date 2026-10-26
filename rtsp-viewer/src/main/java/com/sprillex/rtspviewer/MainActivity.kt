@@ -1,12 +1,19 @@
 package com.sprillex.rtspviewer
 
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.rtsp.RtspMediaSource
@@ -19,8 +26,13 @@ class MainActivity : AppCompatActivity() {
     private var tunnelInitiatedBySession: Boolean = false
     private var tunnelName: String? = "HomeLab"
 
+    private var retryCount = 0
+    private val handler = Handler(Looper.getMainLooper())
+    private var retryRunnable: Runnable? = null
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == ConfigReceiver.KEY_STREAM_URI) {
+            retryCount = 0
             loadAndStartStream()
         }
     }
@@ -36,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
         handleDeepLink(intent)
+        checkNetworkAndStartTunnelIfNeeded()
         initializePlayer()
     }
 
@@ -43,6 +56,7 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleDeepLink(intent)
+        retryCount = 0
         loadAndStartStream()
     }
 
@@ -57,15 +71,33 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        cancelRetry()
         releasePlayer()
     }
 
     override fun onDestroy() {
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
         prefs.unregisterOnSharedPreferenceChangeListener(prefsListener)
+        cancelRetry()
         super.onDestroy()
         releasePlayer()
         teardownTunnelIfNeeded()
+    }
+
+    private fun checkNetworkAndStartTunnelIfNeeded() {
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        val activeNetwork = cm.activeNetwork
+        val caps = cm.getNetworkCapabilities(activeNetwork)
+
+        val isWifi = caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+
+        if (!isWifi) {
+            val intent = Intent(ACTION_SET_TUNNEL_UP).apply {
+                putExtra(EXTRA_NAME, tunnelName ?: TUNNEL_NAME_DEFAULT)
+            }
+            sendBroadcast(intent)
+            tunnelInitiatedBySession = true
+        }
     }
 
     private fun initializePlayer() {
@@ -81,6 +113,19 @@ class MainActivity : AppCompatActivity() {
         val exoPlayer = ExoPlayer.Builder(this)
             .setLoadControl(loadControl)
             .build()
+
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onPlayerError(error: PlaybackException) {
+                if (retryCount < MAX_RETRY_ATTEMPTS) {
+                    retryCount++
+                    cancelRetry()
+                    retryRunnable = Runnable {
+                        loadAndStartStream()
+                    }
+                    handler.postDelayed(retryRunnable!!, RETRY_INTERVAL_MS)
+                }
+            }
+        })
 
         player = exoPlayer
         playerView?.player = exoPlayer
@@ -106,6 +151,11 @@ class MainActivity : AppCompatActivity() {
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
         }
+    }
+
+    private fun cancelRetry() {
+        retryRunnable?.let { handler.removeCallbacks(it) }
+        retryRunnable = null
     }
 
     private fun handleDeepLink(intent: Intent?) {
@@ -142,8 +192,11 @@ class MainActivity : AppCompatActivity() {
         private const val SCHEME_FASTCAM = "fastcam"
         private const val HOST_VIDEO = "video"
         private const val PARAM_STREAM = "stream"
+        private const val ACTION_SET_TUNNEL_UP = "com.wireguard.android.action.SET_TUNNEL_UP"
         private const val ACTION_SET_TUNNEL_DOWN = "com.wireguard.android.action.SET_TUNNEL_DOWN"
         private const val EXTRA_NAME = "name"
         private const val TUNNEL_NAME_DEFAULT = "HomeLab"
+        private const val MAX_RETRY_ATTEMPTS = 4
+        private const val RETRY_INTERVAL_MS = 150L
     }
 }
