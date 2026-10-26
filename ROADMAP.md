@@ -39,7 +39,7 @@ Implement secure out-of-process broadcast synchronization allowing credentials a
 - **Requirements:** Declare custom signature permission `com.sprillex.rtspviewer.permission.WRITE_CONFIG`. Implement `ConfigReceiver` to extract `stream_uri` from `ACTION_UPDATE_STREAM` broadcasts and commit asynchronously to private `SharedPreferences` (`viewer_config.xml`).
 - **Verification:** `adb shell am broadcast -a com.sprillex.rtspviewer.ACTION_UPDATE_STREAM -n com.sprillex.rtspviewer/.ConfigReceiver --es stream_uri "rtsp://test"`
 
-### [ ] Task 2.2: Configurator Companion Application Core [HARD]
+### [x] Task 2.2: Configurator Companion Application Core [HARD]
 - **Target Files:** `rtsp-config/build.gradle.kts`, `rtsp-config/src/main/AndroidManifest.xml`, `rtsp-config/src/main/java/com/sprillex/rtspconfig/MainActivity.kt`
 - **Requirements:** Build admin UI for host, port, credentials, and path input. Implement background raw TCP/RTSP handshake test socket targeting port 554. On commit, dispatch explicit broadcast targeting `com.sprillex.rtspviewer` guarded by the shared signature permission.
 - **Verification:** `./gradlew :rtsp-config:assembleRelease :rtsp-viewer:assembleRelease` (Verify shared APK signing keys)

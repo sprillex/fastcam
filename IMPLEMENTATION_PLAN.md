@@ -53,7 +53,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 - **Verification Criteria:**
   - `adb shell am broadcast -a com.sprillex.rtspviewer.ACTION_UPDATE_STREAM -n com.sprillex.rtspviewer/.ConfigReceiver --es stream_uri "rtsp://test"`
 
-### Task 2.2: Configurator Companion Application Core [HARD]
+### Task 2.2: Configurator Companion Application Core [RESOLVED] [HARD]
 - **Target Files:**
   - Create: `rtsp-config/build.gradle.kts`
   - Create: `rtsp-config/src/main/AndroidManifest.xml`
