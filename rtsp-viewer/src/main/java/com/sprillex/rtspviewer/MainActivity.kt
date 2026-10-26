@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -123,6 +124,12 @@ class MainActivity : AppCompatActivity() {
                         loadAndStartStream()
                     }
                     handler.postDelayed(retryRunnable!!, RETRY_INTERVAL_MS)
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Stream connection failed: ${error.localizedMessage ?: "Playback error"}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         })
@@ -150,6 +157,11 @@ class MainActivity : AppCompatActivity() {
         } else {
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
+            Toast.makeText(
+                this,
+                "No stream URI configured. Set stream URI via FastCam Config.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 

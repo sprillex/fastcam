@@ -12,6 +12,8 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.Executors
 
+import android.net.Uri
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var etHost: EditText
@@ -20,6 +22,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var etUsername: EditText
     private lateinit var etPassword: EditText
     private lateinit var btnSaveSync: Button
+    private lateinit var btnForceSync: Button
     private lateinit var tvStatus: TextView
 
     private val executor = Executors.newSingleThreadExecutor()
@@ -35,40 +38,76 @@ class MainActivity : AppCompatActivity() {
         etUsername = findViewById(R.id.etUsername)
         etPassword = findViewById(R.id.etPassword)
         btnSaveSync = findViewById(R.id.btnSaveSync)
+        btnForceSync = findViewById(R.id.btnForceSync)
         tvStatus = findViewById(R.id.tvStatus)
 
         btnSaveSync.setOnClickListener {
-            validateAndSync()
+            validateAndSync(force = false)
+        }
+
+        btnForceSync.setOnClickListener {
+            validateAndSync(force = true)
         }
     }
 
-    private fun validateAndSync() {
-        val host = etHost.text.toString().trim()
+    private fun validateAndSync(force: Boolean = false) {
+        val rawHostInput = etHost.text.toString().trim()
         val portStr = etPort.text.toString().trim()
-        val path = etPath.text.toString().trim()
-        val username = etUsername.text.toString().trim()
-        val password = etPassword.text.toString().trim()
+        val pathInput = etPath.text.toString().trim()
+        val userInput = etUsername.text.toString().trim()
+        val passInput = etPassword.text.toString().trim()
 
-        if (host.isEmpty()) {
-            etHost.error = "Host is required"
+        if (rawHostInput.isEmpty()) {
+            etHost.error = "Host or RTSP URL is required"
             return
         }
 
-        val port = portStr.toIntOrNull() ?: 554
+        var host = rawHostInput
+        var port = portStr.toIntOrNull() ?: 554
+        var path = pathInput
+        var username = userInput
+        var password = passInput
+
+        if (rawHostInput.contains("://")) {
+            try {
+                val parsedUri = Uri.parse(rawHostInput)
+                parsedUri.host?.let { host = it }
+                if (parsedUri.port != -1) {
+                    port = parsedUri.port
+                }
+                parsedUri.path?.let { if (it.isNotEmpty()) path = it }
+                parsedUri.userInfo?.let { userInfo ->
+                    val parts = userInfo.split(":", limit = 2)
+                    if (parts.isNotEmpty() && parts[0].isNotEmpty()) username = parts[0]
+                    if (parts.size > 1) password = parts[1]
+                }
+            } catch (e: Exception) {
+                // Keep raw inputs if URI parsing fails
+            }
+        }
+
+        val streamUri = buildRtspUri(host, port, path, username, password)
+
+        if (force) {
+            sendConfigBroadcast(streamUri)
+            tvStatus.text = "Force sync complete!\nBroadcast sent: $streamUri"
+            return
+        }
 
         tvStatus.text = "Testing TCP connection to $host:$port..."
         btnSaveSync.isEnabled = false
+        btnForceSync.isEnabled = false
 
         executor.execute {
             val success = testTcpHandshake(host, port)
             mainHandler.post {
                 btnSaveSync.isEnabled = true
+                btnForceSync.isEnabled = true
                 if (success) {
-                    val streamUri = buildRtspUri(host, port, path, username, password)
                     sendConfigBroadcast(streamUri)
                     tvStatus.text = "Connection successful!\nBroadcast sent: $streamUri"
                 } else {
-                    tvStatus.text = "TCP handshake failed targeting $host:$port. Broadcast cancelled."
+                    tvStatus.text = "TCP handshake failed targeting $host:$port.\nUse 'Force Sync' to send broadcast anyway."
                 }
             }
         }
