@@ -168,6 +168,8 @@ class MainActivity : AppCompatActivity() {
         val streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
             ?: DEFAULT_RTSP_URI
 
+        Log.d(TAG, "Loading stream URI: $streamUriString")
+
         if (!streamUriString.isNullOrBlank()) {
             val mediaItem = MediaItem.fromUri(streamUriString)
             val mediaSource = RtspMediaSource.Factory()

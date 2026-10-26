@@ -21,6 +21,7 @@
 
         <activity
             android:name=".MainActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:exported="true"
             android:hardwareAccelerated="true"
             android:launchMode="singleTop"
