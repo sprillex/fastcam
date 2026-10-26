@@ -68,8 +68,6 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         if (player == null) {
             initializePlayer()
-        } else {
-            loadAndStartStream()
         }
     }
 
@@ -139,7 +137,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "onPlayerError: ${error.message}", error)
+                Log.e(TAG, "ExoPlayer error code: ${error.errorCodeName} (${error.errorCode})", error)
+                error.cause?.let { Log.e(TAG, "Root cause: ${it.message}", it) }
                 if (retryCount < MAX_RETRY_ATTEMPTS) {
                     retryCount++
                     cancelRetry()
@@ -167,6 +166,7 @@ class MainActivity : AppCompatActivity() {
         val exoPlayer = player ?: return
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
         val streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
+            ?: DEFAULT_RTSP_URI
 
         if (!streamUriString.isNullOrBlank()) {
             val mediaItem = MediaItem.fromUri(streamUriString)
@@ -225,6 +225,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+        private const val DEFAULT_RTSP_URI = "rtsp://admin:password@192.168.1.202:554/video1"
         private const val SCHEME_FASTCAM = "fastcam"
         private const val HOST_VIDEO = "video"
         private const val PARAM_STREAM = "stream"
