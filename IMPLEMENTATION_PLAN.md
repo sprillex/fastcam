@@ -87,7 +87,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 
 ## Phase 4: Zero-Latency Remote Failover & WireGuard Automation
 
-### Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [HARD]
+### Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [RESOLVED] [HARD]
 - **Target Files:**
   - Modify: `rtsp-viewer/src/main/AndroidManifest.xml`
   - Modify: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
