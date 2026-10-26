@@ -11,13 +11,16 @@ import android.os.Handler
 import android.os.Looper
 import android.view.WindowManager
 import android.widget.Toast
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.rtsp.RtspMediaSource
+import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.ui.PlayerView
 
 class MainActivity : AppCompatActivity() {
@@ -104,19 +107,39 @@ class MainActivity : AppCompatActivity() {
     private fun initializePlayer() {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                200, // minBufferMs
-                500, // maxBufferMs
-                100, // bufferForPlaybackMs
-                200  // bufferForPlaybackAfterRebufferMs
+                1000, // minBufferMs
+                2500, // maxBufferMs
+                500,  // bufferForPlaybackMs
+                1000  // bufferForPlaybackAfterRebufferMs
             )
+            .setPrioritizeTimeOverSizeThresholds(true)
             .build()
 
         val exoPlayer = ExoPlayer.Builder(this)
             .setLoadControl(loadControl)
             .build()
 
+        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
+            .build()
+
+        exoPlayer.addAnalyticsListener(EventLogger())
+
         exoPlayer.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                val stateString = when (playbackState) {
+                    Player.STATE_IDLE -> "STATE_IDLE"
+                    Player.STATE_BUFFERING -> "STATE_BUFFERING"
+                    Player.STATE_READY -> "STATE_READY"
+                    Player.STATE_ENDED -> "STATE_ENDED"
+                    else -> "UNKNOWN"
+                }
+                Log.d(TAG, "onPlaybackStateChanged: $stateString ($playbackState)")
+            }
+
             override fun onPlayerError(error: PlaybackException) {
+                Log.e(TAG, "onPlayerError: ${error.message}", error)
                 if (retryCount < MAX_RETRY_ATTEMPTS) {
                     retryCount++
                     cancelRetry()
@@ -201,6 +224,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val TAG = "MainActivity"
         private const val SCHEME_FASTCAM = "fastcam"
         private const val HOST_VIDEO = "video"
         private const val PARAM_STREAM = "stream"
