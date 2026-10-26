@@ -22,7 +22,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 - **Verification Criteria:**
   - `./gradlew :rtsp-viewer:assembleDebug`
 
-### Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [HARD]
+### Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [RESOLVED] [HARD]
 - **Target Files:**
   - Create: `rtsp-viewer/src/main/res/layout/activity_main.xml`
   - Create: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
@@ -53,7 +53,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 - **Verification Criteria:**
   - `adb shell am broadcast -a com.sprillex.rtspviewer.ACTION_UPDATE_STREAM -n com.sprillex.rtspviewer/.ConfigReceiver --es stream_uri "rtsp://test"`
 
-### Task 2.2: Configurator Companion Application Core [HARD]
+### Task 2.2: Configurator Companion Application Core [RESOLVED] [HARD]
 - **Target Files:**
   - Create: `rtsp-config/build.gradle.kts`
   - Create: `rtsp-config/src/main/AndroidManifest.xml`
@@ -87,7 +87,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 
 ## Phase 4: Zero-Latency Remote Failover & WireGuard Automation
 
-### Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [HARD]
+### Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [RESOLVED] [HARD]
 - **Target Files:**
   - Modify: `rtsp-viewer/src/main/AndroidManifest.xml`
   - Modify: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`

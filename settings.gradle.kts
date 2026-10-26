@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "fastcam"
 include(":rtsp-viewer")
+include(":rtsp-config")

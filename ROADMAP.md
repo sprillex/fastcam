@@ -23,7 +23,7 @@ Establish the foundation of the Viewer app with optimized Media3/ExoPlayer RTSP 
 - **Requirements:** Configure MinSDK 26, TargetSDK 34, JVM 17. Configure ProGuard/R8 minify/shrink directives. Add fullscreen, hardware acceleration flags, and network permissions.
 - **Verification:** `./gradlew :rtsp-viewer:assembleDebug`
 
-### [ ] Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [HARD]
+### [x] Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [HARD]
 - **Target Files:** `rtsp-viewer/src/main/res/layout/activity_main.xml`, `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Requirements:** Inflate layout with `app:use_controller="false"` and `app:surface_type="surface_view"`. Instantiate `ExoPlayer` using custom `DefaultLoadControl` (minBuffer=200ms, maxBuffer=500ms, startBuffer=100ms). Configure `RtspMediaSource.Factory().setForceUseRtpTcp(true)` to prevent NAT packet drops. Enforce `FLAG_KEEP_SCREEN_ON`.
 - **Verification:** `./gradlew :rtsp-viewer:connectedAndroidTest` (Validate video surface allocation and absence of controller overlays)
@@ -39,7 +39,7 @@ Implement secure out-of-process broadcast synchronization allowing credentials a
 - **Requirements:** Declare custom signature permission `com.sprillex.rtspviewer.permission.WRITE_CONFIG`. Implement `ConfigReceiver` to extract `stream_uri` from `ACTION_UPDATE_STREAM` broadcasts and commit asynchronously to private `SharedPreferences` (`viewer_config.xml`).
 - **Verification:** `adb shell am broadcast -a com.sprillex.rtspviewer.ACTION_UPDATE_STREAM -n com.sprillex.rtspviewer/.ConfigReceiver --es stream_uri "rtsp://test"`
 
-### [ ] Task 2.2: Configurator Companion Application Core [HARD]
+### [x] Task 2.2: Configurator Companion Application Core [HARD]
 - **Target Files:** `rtsp-config/build.gradle.kts`, `rtsp-config/src/main/AndroidManifest.xml`, `rtsp-config/src/main/java/com/sprillex/rtspconfig/MainActivity.kt`
 - **Requirements:** Build admin UI for host, port, credentials, and path input. Implement background raw TCP/RTSP handshake test socket targeting port 554. On commit, dispatch explicit broadcast targeting `com.sprillex.rtspviewer` guarded by the shared signature permission.
 - **Verification:** `./gradlew :rtsp-config:assembleRelease :rtsp-viewer:assembleRelease` (Verify shared APK signing keys)
@@ -61,7 +61,7 @@ Enable sub-millisecond invocation from notification handlers (Home Assistant, Pu
 
 Introduce non-blocking kernel network probing and asynchronous WireGuard tunnel orchestration to allow remote viewing without introducing latency while at home.
 
-### [ ] Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [HARD]
+### [x] Task 4.1: Non-Blocking Network Probe & Asynchronous WireGuard Orchestration [HARD]
 - **Target Files:** `rtsp-viewer/src/main/AndroidManifest.xml`, `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Requirements:** Query `ConnectivityManager.getNetworkCapabilities()` during `onCreate()` (<0.5ms in-memory read). If transport is non-Wi-Fi, immediately dispatch broadcast `com.wireguard.android.action.SET_TUNNEL_UP` with tunnel name `HomeLab`. Simultaneously initialize RTSP player in parallel. Implement backoff retry mechanism (150ms interval, max 4 attempts) on `PlaybackException` to catch delayed tunnel initialization.
 - **Verification:** Simulate cellular interface via `adb shell cmd connectivity` and verify intent broadcast via `logcat -s WireGuard`
