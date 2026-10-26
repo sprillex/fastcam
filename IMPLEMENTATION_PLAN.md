@@ -101,7 +101,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 - **Verification Criteria:**
   - Simulate cellular interface via `adb shell cmd connectivity` and verify intent broadcast via `logcat -s WireGuard`
 
-### Task 4.2: Resource Teardown, Codec Release & Tunnel State Restoration [EASY]
+### Task 4.2: Resource Teardown, Codec Release & Tunnel State Restoration [RESOLVED] [EASY]
 - **Target Files:**
   - Modify: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Dependencies:**

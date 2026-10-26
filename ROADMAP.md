@@ -66,7 +66,7 @@ Introduce non-blocking kernel network probing and asynchronous WireGuard tunnel 
 - **Requirements:** Query `ConnectivityManager.getNetworkCapabilities()` during `onCreate()` (<0.5ms in-memory read). If transport is non-Wi-Fi, immediately dispatch broadcast `com.wireguard.android.action.SET_TUNNEL_UP` with tunnel name `HomeLab`. Simultaneously initialize RTSP player in parallel. Implement backoff retry mechanism (150ms interval, max 4 attempts) on `PlaybackException` to catch delayed tunnel initialization.
 - **Verification:** Simulate cellular interface via `adb shell cmd connectivity` and verify intent broadcast via `logcat -s WireGuard`
 
-### [ ] Task 4.2: Resource Teardown, Codec Release & Tunnel State Restoration [EASY]
+### [x] Task 4.2: Resource Teardown, Codec Release & Tunnel State Restoration [EASY]
 - **Target Files:** `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Requirements:** Override `onStop()` and `onDestroy()` to cancel coroutine scopes, immediately release Media3 player surface to free hardware decoders, and dispatch `SET_TUNNEL_DOWN` if and only if the tunnel was initiated by the current viewer session.
 - **Verification:** Run activity finish loop and monitor hardware decoder allocation via `adb shell dumpsys media.player`
