@@ -22,7 +22,7 @@ This document outlines the atomic execution steps for implementing the Zero-Late
 - **Verification Criteria:**
   - `./gradlew :rtsp-viewer:assembleDebug`
 
-### Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [HARD]
+### Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [RESOLVED] [HARD]
 - **Target Files:**
   - Create: `rtsp-viewer/src/main/res/layout/activity_main.xml`
   - Create: `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`

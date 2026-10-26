@@ -23,7 +23,7 @@ Establish the foundation of the Viewer app with optimized Media3/ExoPlayer RTSP 
 - **Requirements:** Configure MinSDK 26, TargetSDK 34, JVM 17. Configure ProGuard/R8 minify/shrink directives. Add fullscreen, hardware acceleration flags, and network permissions.
 - **Verification:** `./gradlew :rtsp-viewer:assembleDebug`
 
-### [ ] Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [HARD]
+### [x] Task 1.2: Raw Surface Layout & Media3 RTSP Player Pipeline [HARD]
 - **Target Files:** `rtsp-viewer/src/main/res/layout/activity_main.xml`, `rtsp-viewer/src/main/java/com/sprillex/rtspviewer/MainActivity.kt`
 - **Requirements:** Inflate layout with `app:use_controller="false"` and `app:surface_type="surface_view"`. Instantiate `ExoPlayer` using custom `DefaultLoadControl` (minBuffer=200ms, maxBuffer=500ms, startBuffer=100ms). Configure `RtspMediaSource.Factory().setForceUseRtpTcp(true)` to prevent NAT packet drops. Enforce `FLAG_KEEP_SCREEN_ON`.
 - **Verification:** `./gradlew :rtsp-viewer:connectedAndroidTest` (Validate video surface allocation and absence of controller overlays)
