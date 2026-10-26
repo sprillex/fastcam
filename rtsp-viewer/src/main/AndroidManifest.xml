@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <permission
+        android:name="com.sprillex.rtspviewer.permission.WRITE_CONFIG"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="com.sprillex.rtspviewer.permission.WRITE_CONFIG" />
+
+    <application
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:icon="@android:drawable/ic_menu_camera"
+        android:label="FastCam RTSP Viewer"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="video"
+                    android:scheme="fastcam" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".ConfigReceiver"
+            android:exported="true"
+            android:permission="com.sprillex.rtspviewer.permission.WRITE_CONFIG">
+            <intent-filter>
+                <action android:name="com.sprillex.rtspviewer.ACTION_UPDATE_STREAM" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>
