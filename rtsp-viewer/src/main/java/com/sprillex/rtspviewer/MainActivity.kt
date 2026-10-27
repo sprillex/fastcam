@@ -52,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
         handleDeepLink(intent)
-        checkNetworkAndStartTunnelIfNeeded()
+        // checkNetworkAndStartTunnelIfNeeded()
         initializePlayer()
     }
 
