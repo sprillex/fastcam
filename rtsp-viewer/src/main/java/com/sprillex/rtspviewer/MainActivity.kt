@@ -105,10 +105,10 @@ class MainActivity : AppCompatActivity() {
     private fun initializePlayer() {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                500,  // minBufferMs
-                2500, // maxBufferMs
-                100,  // bufferForPlaybackMs
-                200   // bufferForPlaybackAfterRebufferMs
+                2500, // minBufferMs
+                5000, // maxBufferMs
+                2000, // bufferForPlaybackMs
+                2000  // bufferForPlaybackAfterRebufferMs
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
