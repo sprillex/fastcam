@@ -9,33 +9,31 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.WindowManager
 import android.widget.Toast
-import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import androidx.media3.common.C
-import androidx.media3.common.MediaItem
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player
-import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.ExoPlayer
-import androidx.media3.exoplayer.rtsp.RtspMediaSource
-import androidx.media3.exoplayer.util.EventLogger
-import androidx.media3.ui.PlayerView
+import org.videolan.libvlc.LibVLC
+import org.videolan.libvlc.Media
+import org.videolan.libvlc.MediaPlayer
+import org.videolan.libvlc.util.VLCVideoLayout
 
 class MainActivity : AppCompatActivity() {
 
-    private var player: ExoPlayer? = null
-    private var playerView: PlayerView? = null
+    private var libVLC: LibVLC? = null
+    private var mediaPlayer: MediaPlayer? = null
+    private var videoLayout: VLCVideoLayout? = null
+
     private var tunnelInitiatedBySession: Boolean = false
     private var tunnelName: String? = "HomeLab"
 
     private var retryCount = 0
     private val handler = Handler(Looper.getMainLooper())
     private var retryRunnable: Runnable? = null
+    private var isBuffering = false
 
     private val bufferingTimeoutRunnable = Runnable {
-        if (player?.playbackState == Player.STATE_BUFFERING) {
+        if (isBuffering) {
             Log.w(TAG, "RTSP connection timed out while buffering. Retrying stream...")
             loadAndStartStream()
         }
@@ -53,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         setContentView(R.layout.activity_main)
 
-        playerView = findViewById(R.id.playerView)
+        videoLayout = findViewById(R.id.videoLayout)
 
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
@@ -73,14 +71,17 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (player == null) {
+        if (mediaPlayer == null) {
             initializePlayer()
+        } else {
+            videoLayout?.let { mediaPlayer?.attachViews(it, null, false, false) }
         }
     }
 
     override fun onStop() {
         super.onStop()
         cancelRetry()
+        mediaPlayer?.detachViews()
         releasePlayer()
     }
 
@@ -110,72 +111,83 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializePlayer() {
-        val loadControl = DefaultLoadControl.Builder()
-            .setBufferDurationsMs(
-                2500, // minBufferMs
-                5000, // maxBufferMs
-                2000, // bufferForPlaybackMs
-                2000  // bufferForPlaybackAfterRebufferMs
-            )
-            .setPrioritizeTimeOverSizeThresholds(true)
-            .build()
+        val options = ArrayList<String>().apply {
+            add("--no-audio")
+            add("--network-caching=150")
+            add("--drop-late-frames")
+            add("--skip-frames")
+        }
 
-        val exoPlayer = ExoPlayer.Builder(this)
-            .setLoadControl(loadControl)
-            .build()
+        val vlcInstance = LibVLC(this, options)
+        val player = MediaPlayer(vlcInstance)
 
-        exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
-            .buildUpon()
-            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true)
-            .build()
+        videoLayout?.let {
+            player.attachViews(it, null, false, false)
+        }
 
-        exoPlayer.addAnalyticsListener(EventLogger())
-
-        exoPlayer.addListener(object : Player.Listener {
-            override fun onPlaybackStateChanged(playbackState: Int) {
-                val stateString = when (playbackState) {
-                    Player.STATE_IDLE -> "STATE_IDLE"
-                    Player.STATE_BUFFERING -> "STATE_BUFFERING"
-                    Player.STATE_READY -> "STATE_READY"
-                    Player.STATE_ENDED -> "STATE_ENDED"
-                    else -> "UNKNOWN"
-                }
-                Log.d(TAG, "onPlaybackStateChanged: $stateString ($playbackState)")
-
-                handler.removeCallbacks(bufferingTimeoutRunnable)
-                if (playbackState == Player.STATE_BUFFERING) {
-                    handler.postDelayed(bufferingTimeoutRunnable, BUFFERING_TIMEOUT_MS)
-                }
-            }
-
-            override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "ExoPlayer error code: ${error.errorCodeName} (${error.errorCode})", error)
-                error.cause?.let { Log.e(TAG, "Root cause: ${it.message}", it) }
-                if (retryCount < MAX_RETRY_ATTEMPTS) {
-                    retryCount++
-                    cancelRetry()
-                    retryRunnable = Runnable {
-                        loadAndStartStream()
+        player.setEventListener { event ->
+            when (event.type) {
+                MediaPlayer.Event.Buffering -> {
+                    val floatBuffer = event.buffering
+                    Log.d(TAG, "MediaPlayer Buffering: $floatBuffer")
+                    if (floatBuffer < 100f) {
+                        if (!isBuffering) {
+                            isBuffering = true
+                            handler.removeCallbacks(bufferingTimeoutRunnable)
+                            handler.postDelayed(bufferingTimeoutRunnable, BUFFERING_TIMEOUT_MS)
+                        }
+                    } else {
+                        isBuffering = false
+                        handler.removeCallbacks(bufferingTimeoutRunnable)
                     }
-                    handler.postDelayed(retryRunnable!!, RETRY_INTERVAL_MS)
-                } else {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Stream connection failed: ${error.localizedMessage ?: "Playback error"}",
-                        Toast.LENGTH_LONG
-                    ).show()
+                }
+                MediaPlayer.Event.Playing -> {
+                    Log.d(TAG, "MediaPlayer Playing")
+                    isBuffering = false
+                    handler.removeCallbacks(bufferingTimeoutRunnable)
+                    retryCount = 0
+                }
+                MediaPlayer.Event.EncounteredError -> {
+                    Log.e(TAG, "MediaPlayer EncounteredError")
+                    isBuffering = false
+                    handler.removeCallbacks(bufferingTimeoutRunnable)
+                    handleError()
+                }
+                MediaPlayer.Event.EndReached -> {
+                    Log.d(TAG, "MediaPlayer EndReached")
+                    isBuffering = false
+                    handler.removeCallbacks(bufferingTimeoutRunnable)
                 }
             }
-        })
+        }
 
-        player = exoPlayer
-        playerView?.player = exoPlayer
+        libVLC = vlcInstance
+        mediaPlayer = player
 
         loadAndStartStream()
     }
 
+    private fun handleError() {
+        if (retryCount < MAX_RETRY_ATTEMPTS) {
+            retryCount++
+            cancelRetry()
+            retryRunnable = Runnable {
+                loadAndStartStream()
+            }
+            handler.postDelayed(retryRunnable!!, RETRY_INTERVAL_MS)
+        } else {
+            Toast.makeText(
+                this@MainActivity,
+                "Stream connection failed after $MAX_RETRY_ATTEMPTS attempts.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     private fun loadAndStartStream() {
-        val exoPlayer = player ?: return
+        val player = mediaPlayer ?: return
+        val vlc = libVLC ?: return
+
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
         val streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
             ?: DEFAULT_RTSP_URI
@@ -183,20 +195,16 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Loading stream URI: $streamUriString")
 
         if (!streamUriString.isNullOrBlank()) {
-            val mediaItem = MediaItem.fromUri(streamUriString)
-            val mediaSource = RtspMediaSource.Factory()
-                .setUserAgent("AndroidXMedia3/1.4.1")
-                .setSocketFactory(SdpSanitizingSocketFactory())
-                .setForceUseRtpTcp(false)
-                .setDebugLoggingEnabled(true)
-                .createMediaSource(mediaItem)
+            val media = Media(vlc, Uri.parse(streamUriString))
+            media.setHWDecoderEnabled(true, false)
+            media.addOption(":no-audio")
+            media.addOption(":network-caching=150")
 
-            exoPlayer.setMediaSource(mediaSource)
-            exoPlayer.prepare()
-            exoPlayer.playWhenReady = true
+            player.media = media
+            media.release()
+            player.play()
         } else {
-            exoPlayer.stop()
-            exoPlayer.clearMediaItems()
+            player.stop()
             Toast.makeText(
                 this,
                 "No stream URI configured. Set stream URI via FastCam Config.",
@@ -224,11 +232,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun releasePlayer() {
         handler.removeCallbacks(bufferingTimeoutRunnable)
-        player?.let {
+        mediaPlayer?.let {
             it.stop()
-            it.clearMediaItems()
+            it.detachViews()
             it.release()
-            player = null
+            mediaPlayer = null
+        }
+        libVLC?.let {
+            it.release()
+            libVLC = null
         }
     }
 
