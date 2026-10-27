@@ -165,8 +165,12 @@ class MainActivity : AppCompatActivity() {
     private fun loadAndStartStream() {
         val exoPlayer = player ?: return
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
-        val streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
+        var streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
             ?: DEFAULT_RTSP_URI
+
+        if (!streamUriString.isNullOrBlank() && !streamUriString.endsWith("/")) {
+            streamUriString = "$streamUriString/"
+        }
 
         Log.d(TAG, "Loading stream URI: $streamUriString")
 
@@ -228,7 +232,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val DEFAULT_RTSP_URI = "rtsp://admin:password@192.168.1.202:554/video1"
+        private const val DEFAULT_RTSP_URI = "rtsp://admin:password@192.168.1.202:554/video1/"
         private const val SCHEME_FASTCAM = "fastcam"
         private const val HOST_VIDEO = "video"
         private const val PARAM_STREAM = "stream"
