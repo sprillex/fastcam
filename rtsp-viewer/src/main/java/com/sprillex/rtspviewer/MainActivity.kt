@@ -34,6 +34,13 @@ class MainActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private var retryRunnable: Runnable? = null
 
+    private val bufferingTimeoutRunnable = Runnable {
+        if (player?.playbackState == Player.STATE_BUFFERING) {
+            Log.w(TAG, "RTSP connection timed out while buffering. Retrying stream...")
+            loadAndStartStream()
+        }
+    }
+
     private val prefsListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == ConfigReceiver.KEY_STREAM_URI) {
             retryCount = 0
@@ -134,6 +141,11 @@ class MainActivity : AppCompatActivity() {
                     else -> "UNKNOWN"
                 }
                 Log.d(TAG, "onPlaybackStateChanged: $stateString ($playbackState)")
+
+                handler.removeCallbacks(bufferingTimeoutRunnable)
+                if (playbackState == Player.STATE_BUFFERING) {
+                    handler.postDelayed(bufferingTimeoutRunnable, BUFFERING_TIMEOUT_MS)
+                }
             }
 
             override fun onPlayerError(error: PlaybackException) {
@@ -165,19 +177,15 @@ class MainActivity : AppCompatActivity() {
     private fun loadAndStartStream() {
         val exoPlayer = player ?: return
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
-        var streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
+        val streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
             ?: DEFAULT_RTSP_URI
-
-        if (!streamUriString.isNullOrBlank() && !streamUriString.endsWith("/")) {
-            streamUriString = "$streamUriString/"
-        }
 
         Log.d(TAG, "Loading stream URI: $streamUriString")
 
         if (!streamUriString.isNullOrBlank()) {
             val mediaItem = MediaItem.fromUri(streamUriString)
             val mediaSource = RtspMediaSource.Factory()
-                .setForceUseRtpTcp(true)
+                .setForceUseRtpTcp(false)
                 .setDebugLoggingEnabled(true)
                 .createMediaSource(mediaItem)
 
@@ -196,6 +204,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cancelRetry() {
+        handler.removeCallbacks(bufferingTimeoutRunnable)
         retryRunnable?.let { handler.removeCallbacks(it) }
         retryRunnable = null
     }
@@ -212,6 +221,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun releasePlayer() {
+        handler.removeCallbacks(bufferingTimeoutRunnable)
         player?.let {
             it.stop()
             it.clearMediaItems()
@@ -232,7 +242,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val DEFAULT_RTSP_URI = "rtsp://admin:password@192.168.1.202:554/video1/"
+        private const val DEFAULT_RTSP_URI = "rtsp://admin:password@192.168.1.202:554/video1"
         private const val SCHEME_FASTCAM = "fastcam"
         private const val HOST_VIDEO = "video"
         private const val PARAM_STREAM = "stream"
@@ -242,5 +252,6 @@ class MainActivity : AppCompatActivity() {
         private const val TUNNEL_NAME_DEFAULT = "HomeLab"
         private const val MAX_RETRY_ATTEMPTS = 4
         private const val RETRY_INTERVAL_MS = 150L
+        private const val BUFFERING_TIMEOUT_MS = 6000L
     }
 }
