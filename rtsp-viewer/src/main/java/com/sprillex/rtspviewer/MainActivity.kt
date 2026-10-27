@@ -23,6 +23,7 @@ class MainActivity : AppCompatActivity() {
     private var libVLC: LibVLC? = null
     private var mediaPlayer: MediaPlayer? = null
     private var videoLayout: VLCVideoLayout? = null
+    private var isViewsAttached = false
 
     private var tunnelInitiatedBySession: Boolean = false
     private var tunnelName: String? = "HomeLab"
@@ -58,7 +59,6 @@ class MainActivity : AppCompatActivity() {
 
         handleDeepLink(intent)
         // checkNetworkAndStartTunnelIfNeeded()
-        initializePlayer()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -71,17 +71,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (mediaPlayer == null) {
+        if (libVLC == null || mediaPlayer == null) {
             initializePlayer()
-        } else {
-            videoLayout?.let { mediaPlayer?.attachViews(it, null, false, false) }
+        } else if (!isViewsAttached) {
+            attachPlayerViews()
         }
+        loadAndStartStream()
     }
 
     override fun onStop() {
         super.onStop()
         cancelRetry()
-        mediaPlayer?.detachViews()
+        detachPlayerViews()
         releasePlayer()
     }
 
@@ -116,14 +117,11 @@ class MainActivity : AppCompatActivity() {
             add("--network-caching=150")
             add("--drop-late-frames")
             add("--skip-frames")
+            add("--rtsp-tcp")
         }
 
         val vlcInstance = LibVLC(this, options)
         val player = MediaPlayer(vlcInstance)
-
-        videoLayout?.let {
-            player.attachViews(it, null, false, false)
-        }
 
         player.setEventListener { event ->
             when (event.type) {
@@ -164,7 +162,28 @@ class MainActivity : AppCompatActivity() {
         libVLC = vlcInstance
         mediaPlayer = player
 
-        loadAndStartStream()
+        attachPlayerViews()
+    }
+
+    private fun attachPlayerViews() {
+        val layout = videoLayout ?: return
+        val player = mediaPlayer ?: return
+        if (!isViewsAttached) {
+            player.attachViews(layout, null, false, false)
+            isViewsAttached = true
+        }
+    }
+
+    private fun detachPlayerViews() {
+        val player = mediaPlayer ?: return
+        if (isViewsAttached) {
+            try {
+                player.detachViews()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error detaching player views: ${e.message}")
+            }
+            isViewsAttached = false
+        }
     }
 
     private fun handleError() {
@@ -195,6 +214,9 @@ class MainActivity : AppCompatActivity() {
         Log.d(TAG, "Loading stream URI: $streamUriString")
 
         if (!streamUriString.isNullOrBlank()) {
+            if (player.isPlaying) {
+                player.stop()
+            }
             val media = Media(vlc, Uri.parse(streamUriString))
             media.setHWDecoderEnabled(true, false)
             media.addOption(":no-audio")
@@ -204,7 +226,9 @@ class MainActivity : AppCompatActivity() {
             media.release()
             player.play()
         } else {
-            player.stop()
+            if (player.isPlaying) {
+                player.stop()
+            }
             Toast.makeText(
                 this,
                 "No stream URI configured. Set stream URI via FastCam Config.",
@@ -232,9 +256,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun releasePlayer() {
         handler.removeCallbacks(bufferingTimeoutRunnable)
+        detachPlayerViews()
         mediaPlayer?.let {
-            it.stop()
-            it.detachViews()
+            if (it.isPlaying) {
+                it.stop()
+            }
             it.release()
             mediaPlayer = null
         }
