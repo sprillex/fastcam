@@ -112,57 +112,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initializePlayer() {
-        val options = ArrayList<String>().apply {
-            add("--no-audio")
-            add("--network-caching=150")
-            add("--drop-late-frames")
-            add("--skip-frames")
-            add("--rtsp-tcp")
-        }
+        try {
+            val options = ArrayList<String>().apply {
+                add("--no-audio")
+                add("--network-caching=150")
+                add("--drop-late-frames")
+                add("--skip-frames")
+                add("--rtsp-tcp")
+            }
 
-        val vlcInstance = LibVLC(this, options)
-        val player = MediaPlayer(vlcInstance)
+            val vlcInstance = LibVLC(this, options)
+            val player = MediaPlayer(vlcInstance)
 
-        player.setEventListener { event ->
-            when (event.type) {
-                MediaPlayer.Event.Buffering -> {
-                    val floatBuffer = event.buffering
-                    Log.d(TAG, "MediaPlayer Buffering: $floatBuffer")
-                    if (floatBuffer < 100f) {
-                        if (!isBuffering) {
-                            isBuffering = true
+            player.setEventListener { event ->
+                when (event.type) {
+                    MediaPlayer.Event.Buffering -> {
+                        val floatBuffer = event.buffering
+                        Log.d(TAG, "MediaPlayer Buffering: $floatBuffer")
+                        if (floatBuffer < 100f) {
+                            if (!isBuffering) {
+                                isBuffering = true
+                                handler.removeCallbacks(bufferingTimeoutRunnable)
+                                handler.postDelayed(bufferingTimeoutRunnable, BUFFERING_TIMEOUT_MS)
+                            }
+                        } else {
+                            isBuffering = false
                             handler.removeCallbacks(bufferingTimeoutRunnable)
-                            handler.postDelayed(bufferingTimeoutRunnable, BUFFERING_TIMEOUT_MS)
                         }
-                    } else {
+                    }
+                    MediaPlayer.Event.Playing -> {
+                        Log.d(TAG, "MediaPlayer Playing")
+                        isBuffering = false
+                        handler.removeCallbacks(bufferingTimeoutRunnable)
+                        retryCount = 0
+                    }
+                    MediaPlayer.Event.EncounteredError -> {
+                        Log.e(TAG, "MediaPlayer EncounteredError")
+                        isBuffering = false
+                        handler.removeCallbacks(bufferingTimeoutRunnable)
+                        handleError()
+                    }
+                    MediaPlayer.Event.EndReached -> {
+                        Log.d(TAG, "MediaPlayer EndReached")
                         isBuffering = false
                         handler.removeCallbacks(bufferingTimeoutRunnable)
                     }
                 }
-                MediaPlayer.Event.Playing -> {
-                    Log.d(TAG, "MediaPlayer Playing")
-                    isBuffering = false
-                    handler.removeCallbacks(bufferingTimeoutRunnable)
-                    retryCount = 0
-                }
-                MediaPlayer.Event.EncounteredError -> {
-                    Log.e(TAG, "MediaPlayer EncounteredError")
-                    isBuffering = false
-                    handler.removeCallbacks(bufferingTimeoutRunnable)
-                    handleError()
-                }
-                MediaPlayer.Event.EndReached -> {
-                    Log.d(TAG, "MediaPlayer EndReached")
-                    isBuffering = false
-                    handler.removeCallbacks(bufferingTimeoutRunnable)
-                }
             }
+
+            libVLC = vlcInstance
+            mediaPlayer = player
+
+            attachPlayerViews()
+        } catch (t: Throwable) {
+            Log.e(TAG, "Failed to initialize LibVLC", t)
+            Toast.makeText(this, "Failed to initialize video engine: ${t.localizedMessage}", Toast.LENGTH_LONG).show()
         }
-
-        libVLC = vlcInstance
-        mediaPlayer = player
-
-        attachPlayerViews()
     }
 
     private fun attachPlayerViews() {
