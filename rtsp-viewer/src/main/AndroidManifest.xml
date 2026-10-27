@@ -11,6 +11,7 @@
     <uses-permission android:name="com.sprillex.rtspviewer.permission.WRITE_CONFIG" />
 
     <application
+        android:name=".SprillexApplication"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:icon="@android:drawable/ic_menu_camera"
@@ -41,6 +42,12 @@
                     android:scheme="fastcam" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CrashReportActivity"
+            android:exported="false"
+            android:process=":crash_report"
+            android:theme="@style/AppTheme" />
 
         <receiver
             android:name=".ConfigReceiver"
