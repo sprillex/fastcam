@@ -105,10 +105,10 @@ class MainActivity : AppCompatActivity() {
     private fun initializePlayer() {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                1000, // minBufferMs
+                500,  // minBufferMs
                 2500, // maxBufferMs
-                500,  // bufferForPlaybackMs
-                1000  // bufferForPlaybackAfterRebufferMs
+                100,  // bufferForPlaybackMs
+                200   // bufferForPlaybackAfterRebufferMs
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -174,6 +174,7 @@ class MainActivity : AppCompatActivity() {
             val mediaItem = MediaItem.fromUri(streamUriString)
             val mediaSource = RtspMediaSource.Factory()
                 .setForceUseRtpTcp(true)
+                .setDebugLoggingEnabled(true)
                 .createMediaSource(mediaItem)
 
             exoPlayer.setMediaSource(mediaSource)
