@@ -185,6 +185,7 @@ class MainActivity : AppCompatActivity() {
         if (!streamUriString.isNullOrBlank()) {
             val mediaItem = MediaItem.fromUri(streamUriString)
             val mediaSource = RtspMediaSource.Factory()
+                .setUserAgent("AndroidXMedia3/1.4.1\r\nAccept: application/sdp")
                 .setForceUseRtpTcp(false)
                 .setDebugLoggingEnabled(true)
                 .createMediaSource(mediaItem)
