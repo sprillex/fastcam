@@ -40,4 +40,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("org.videolan.android:libvlc-all:3.6.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

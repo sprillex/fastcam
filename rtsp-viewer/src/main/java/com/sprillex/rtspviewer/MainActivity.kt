@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
+import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -33,10 +35,14 @@ class MainActivity : AppCompatActivity() {
     private var retryRunnable: Runnable? = null
     private var isBuffering = false
 
+    private var connectivityManager: ConnectivityManager? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+
     private val bufferingTimeoutRunnable = Runnable {
         if (isBuffering) {
             Log.w(TAG, "RTSP connection timed out while buffering. Retrying stream...")
-            loadAndStartStream()
+            isBuffering = false
+            handleError()
         }
     }
 
@@ -53,12 +59,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         videoLayout = findViewById(R.id.videoLayout)
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
 
         val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
         prefs.registerOnSharedPreferenceChangeListener(prefsListener)
 
         handleDeepLink(intent)
-        // checkNetworkAndStartTunnelIfNeeded()
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -71,6 +77,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        registerNetworkCallback()
+        checkNetworkAndStartTunnelIfNeeded()
         if (libVLC == null || mediaPlayer == null) {
             initializePlayer()
         } else if (!isViewsAttached) {
@@ -81,6 +89,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        unregisterNetworkCallback()
         cancelRetry()
         detachPlayerViews()
         releasePlayer()
@@ -95,19 +104,71 @@ class MainActivity : AppCompatActivity() {
         teardownTunnelIfNeeded()
     }
 
+    private fun registerNetworkCallback() {
+        if (networkCallback != null) return
+        val cm = connectivityManager ?: return
+        val request = NetworkRequest.Builder()
+            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+
+        networkCallback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                Log.d(TAG, "Network available. Checking stream status...")
+                checkNetworkAndStartTunnelIfNeeded()
+                mainHandlerPost {
+                    if (mediaPlayer?.isPlaying == false && retryCount < MAX_RETRY_ATTEMPTS) {
+                        loadAndStartStream()
+                    }
+                }
+            }
+
+            override fun onLost(network: Network) {
+                Log.w(TAG, "Network lost.")
+            }
+        }
+
+        try {
+            cm.registerNetworkCallback(request, networkCallback!!)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to register network callback", e)
+        }
+    }
+
+    private fun unregisterNetworkCallback() {
+        networkCallback?.let {
+            try {
+                connectivityManager?.unregisterNetworkCallback(it)
+            } catch (e: Exception) {
+                Log.w(TAG, "Error unregistering network callback: ${e.message}")
+            }
+            networkCallback = null
+        }
+    }
+
+    private fun mainHandlerPost(action: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            action()
+        } else {
+            handler.post(action)
+        }
+    }
+
     private fun checkNetworkAndStartTunnelIfNeeded() {
-        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        val cm = connectivityManager ?: return
         val activeNetwork = cm.activeNetwork
         val caps = cm.getNetworkCapabilities(activeNetwork)
 
         val isWifi = caps != null && caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
 
-        if (!isWifi) {
-            val intent = Intent(ACTION_SET_TUNNEL_UP).apply {
-                putExtra(EXTRA_NAME, tunnelName ?: TUNNEL_NAME_DEFAULT)
+        if (!isWifi && caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+            if (!tunnelInitiatedBySession) {
+                Log.i(TAG, "Non-Wi-Fi network detected. Triggering WireGuard VPN tunnel '$tunnelName'...")
+                val intent = Intent(ACTION_SET_TUNNEL_UP).apply {
+                    putExtra(EXTRA_NAME, tunnelName ?: TUNNEL_NAME_DEFAULT)
+                }
+                sendBroadcast(intent)
+                tunnelInitiatedBySession = true
             }
-            sendBroadcast(intent)
-            tunnelInitiatedBySession = true
         }
     }
 
@@ -194,12 +255,15 @@ class MainActivity : AppCompatActivity() {
     private fun handleError() {
         if (retryCount < MAX_RETRY_ATTEMPTS) {
             retryCount++
+            val backoffDelayMs = (BASE_RETRY_INTERVAL_MS * (1 shl (retryCount - 1))).coerceAtMost(MAX_RETRY_INTERVAL_MS)
+            Log.w(TAG, "RTSP connection failed. Reconnection attempt $retryCount/$MAX_RETRY_ATTEMPTS in ${backoffDelayMs}ms...")
             cancelRetry()
             retryRunnable = Runnable {
                 loadAndStartStream()
             }
-            handler.postDelayed(retryRunnable!!, RETRY_INTERVAL_MS)
+            handler.postDelayed(retryRunnable!!, backoffDelayMs)
         } else {
+            Log.e(TAG, "Stream connection failed after $MAX_RETRY_ATTEMPTS attempts.")
             Toast.makeText(
                 this@MainActivity,
                 "Stream connection failed after $MAX_RETRY_ATTEMPTS attempts.",
@@ -216,9 +280,10 @@ class MainActivity : AppCompatActivity() {
         val streamUriString = prefs.getString(ConfigReceiver.KEY_STREAM_URI, null)
             ?: DEFAULT_RTSP_URI
 
-        Log.d(TAG, "Loading stream URI: $streamUriString")
+        val maskedUri = RtspUriUtils.maskCredentials(streamUriString)
+        Log.d(TAG, "Loading stream URI: $maskedUri")
 
-        if (!streamUriString.isNullOrBlank()) {
+        if (RtspUriUtils.isValidRtspUri(streamUriString)) {
             if (player.isPlaying) {
                 player.stop()
             }
@@ -226,6 +291,9 @@ class MainActivity : AppCompatActivity() {
             media.setHWDecoderEnabled(true, false)
             media.addOption(":no-audio")
             media.addOption(":network-caching=150")
+            media.addOption(":live-caching=150")
+            media.addOption(":clock-jitter=0")
+            media.addOption(":clock-synchro=0")
 
             player.media = media
             media.release()
@@ -236,7 +304,7 @@ class MainActivity : AppCompatActivity() {
             }
             Toast.makeText(
                 this,
-                "No stream URI configured. Set stream URI via FastCam Config.",
+                "No valid stream URI configured. Set stream URI via FastCam Config.",
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -252,9 +320,11 @@ class MainActivity : AppCompatActivity() {
         val uri: Uri? = intent?.data
         if (uri != null && uri.scheme == SCHEME_FASTCAM && uri.host == HOST_VIDEO) {
             val streamOverride = uri.getQueryParameter(PARAM_STREAM)
-            if (!streamOverride.isNullOrBlank()) {
+            if (!streamOverride.isNullOrBlank() && RtspUriUtils.isValidRtspUri(streamOverride)) {
                 val prefs = getSharedPreferences(ConfigReceiver.PREFS_NAME, MODE_PRIVATE)
-                prefs.edit().putString(ConfigReceiver.KEY_STREAM_URI, streamOverride).apply()
+                prefs.edit().putString(ConfigReceiver.KEY_STREAM_URI, streamOverride.trim()).apply()
+            } else if (!streamOverride.isNullOrBlank()) {
+                Log.w(TAG, "Invalid deep link stream URI provided: ${RtspUriUtils.maskCredentials(streamOverride)}")
             }
         }
     }
@@ -296,7 +366,8 @@ class MainActivity : AppCompatActivity() {
         private const val EXTRA_NAME = "name"
         private const val TUNNEL_NAME_DEFAULT = "HomeLab"
         private const val MAX_RETRY_ATTEMPTS = 4
-        private const val RETRY_INTERVAL_MS = 150L
+        private const val BASE_RETRY_INTERVAL_MS = 500L
+        private const val MAX_RETRY_INTERVAL_MS = 5000L
         private const val BUFFERING_TIMEOUT_MS = 6000L
     }
 }
