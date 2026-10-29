@@ -2,7 +2,7 @@
 
 This document outlines the atomic execution steps for implementing the remaining unstarted milestones of the Zero-Latency RTSP Viewer Ecosystem, specifically migrating the application from LibVLC to Media3 (ExoPlayer) and finalizing the WireGuard integration. Each task is sized for single-PR automated execution and strictly ordered by sequential dependency path.
 
-### Task 1.1: Project Scaffolding, Build Configuration & Manifest Hardening [EASY]
+### [RESOLVED] Task 1.1: Project Scaffolding, Build Configuration & Manifest Hardening [EASY]
 - **Target Files:** `rtsp-viewer/build.gradle.kts`
 - **Core Technical Requirements:** Remove the existing `org.videolan.android:libvlc-all` dependency. Add the required Media3 dependencies: `androidx.media3:media3-exoplayer:1.3.1`, `androidx.media3:media3-exoplayer-rtsp:1.3.1`, and `androidx.media3:media3-ui:1.3.1`. Ensure MinSDK is 26, TargetSDK is 34, and JVM target is 17.
 - **Dependency Boundaries:** None.
