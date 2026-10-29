@@ -1,6 +1,7 @@
 package com.sprillex.rtspconfig
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -11,8 +12,6 @@ import androidx.appcompat.app.AppCompatActivity
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.concurrent.Executors
-
-import android.net.Uri
 
 class MainActivity : AppCompatActivity() {
 
@@ -86,11 +85,17 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val streamUri = buildRtspUri(host, port, path, username, password)
+        val streamUri = RtspUriUtils.buildRtspUri(host, port, path, username, password)
+        if (!RtspUriUtils.isValidRtspUri(streamUri)) {
+            tvStatus.text = "Error: Invalid RTSP URI generated."
+            return
+        }
+
+        val maskedUri = RtspUriUtils.maskCredentials(streamUri)
 
         if (force) {
             sendConfigBroadcast(streamUri)
-            tvStatus.text = "Force sync complete!\nBroadcast sent: $streamUri"
+            tvStatus.text = "Force sync complete!\nBroadcast sent: $maskedUri"
             return
         }
 
@@ -105,7 +110,7 @@ class MainActivity : AppCompatActivity() {
                 btnForceSync.isEnabled = true
                 if (success) {
                     sendConfigBroadcast(streamUri)
-                    tvStatus.text = "Connection successful!\nBroadcast sent: $streamUri"
+                    tvStatus.text = "Connection successful!\nBroadcast sent: $maskedUri"
                 } else {
                     tvStatus.text = "TCP handshake failed targeting $host:$port.\nUse 'Force Sync' to send broadcast anyway."
                 }
@@ -122,22 +127,6 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) {
             false
         }
-    }
-
-    private fun buildRtspUri(
-        host: String,
-        port: Int,
-        path: String,
-        user: String,
-        pass: String
-    ): String {
-        val auth = if (user.isNotEmpty()) {
-            if (pass.isNotEmpty()) "$user:$pass@" else "$user@"
-        } else {
-            ""
-        }
-        val cleanPath = if (path.startsWith("/")) path else "/$path"
-        return "rtsp://$auth$host:$port$cleanPath"
     }
 
     private fun sendConfigBroadcast(streamUri: String) {
